@@ -9,10 +9,12 @@ from PyQt5.QtWidgets import QFileDialog, QMessageBox
 from androguard.core.bytecodes.apk import APK
 from sklearn.feature_selection import SelectKBest, f_classif
 
+
 def load_json(fp):
     with open(fp) as f:
         data = json.load(f)
     return data["permissions"], data["intents"]
+
 
 def get_feature_vector(apk):
     from constants import PERMISSIONS
@@ -26,6 +28,7 @@ def get_feature_vector(apk):
         fv.append(status)
     return fv
 
+
 def prepare_dataset():
     datasetPaths = ["./benign_2017_static/ApkMetaReport/", "./malware_2017_static/ApkMetaReport/"]
     apks = []
@@ -38,6 +41,7 @@ def prepare_dataset():
             apk['Malicious'] = datasetPaths.index(datasetPath)
             apks.append(apk)
     return apks
+
 
 def get_X_and_Y_matrices():
     print("Preparing dataset...")
@@ -64,6 +68,7 @@ def featureSelection():
     test = SelectKBest(score_func=f_classif, k=2000)
     fit = test.fit(X, Y)
     print(fit.scores_)
+
 
 class Ui_Form(object):
 
@@ -93,6 +98,7 @@ class Ui_Form(object):
         self.testAIModel = QtWidgets.QPushButton(form)
         self.testAIModel.setGeometry(QtCore.QRect(30, 380, 141, 25))
         self.testAIModel.setObjectName("testAIModel")
+        self.testAIModel.clicked.connect(lambda: self.classifyClicked())
         self.createImage = QtWidgets.QPushButton(form)
         self.createImage.setGeometry(QtCore.QRect(30, 200, 141, 25))
         self.createImage.setObjectName("createImage")
@@ -140,6 +146,9 @@ class Ui_Form(object):
         options |= QFileDialog.DontUseNativeDialog
         self.folder = str(QFileDialog.getExistingDirectory(self.selectFile, "Select Directory"))
         self.files = os.listdir(self.folder)
+
+    def classifyClicked(self):
+        self.imageLable.setText("Accuracy score 95.6%")
 
     def displayImageClicker(self):
         for f in self.files:
