@@ -9,67 +9,6 @@ from PyQt5.QtWidgets import QFileDialog, QMessageBox
 from androguard.core.bytecodes.apk import APK
 from sklearn.feature_selection import SelectKBest, f_classif
 
-
-def load_json(fp):
-    with open(fp) as f:
-        data = json.load(f)
-    return data["permissions"], data["intents"]
-
-
-def get_feature_vector(apk):
-    from constants import PERMISSIONS
-    from constants import INTENTS
-    fv = []  # feature vector
-    for permission in PERMISSIONS:
-        status = 1 if permission in apk['permissions'] else 0
-        fv.append(status)
-    for intent in INTENTS:
-        status = 1 if intent in apk['intents'] else 0
-        fv.append(status)
-    return fv
-
-
-def prepare_dataset():
-    datasetPaths = ["./benign_2017_static/ApkMetaReport/", "./malware_2017_static/ApkMetaReport/"]
-    apks = []
-    for datasetPath in datasetPaths:
-        APKFiles = os.listdir(datasetPath)
-        for apkfile in APKFiles:
-            apk = {}
-            apkfilepath = datasetPath + apkfile
-            apk['permissions'], apk['intents'] = load_json(apkfilepath)
-            apk['Malicious'] = datasetPaths.index(datasetPath)
-            apks.append(apk)
-    return apks
-
-
-def get_X_and_Y_matrices():
-    print("Preparing dataset...")
-    dataset = prepare_dataset()
-    print("Dataset preparation completed.")
-    print("Creating x and y matrices...")
-    x = []
-    y = []
-    for apk in dataset:
-        x.append(get_feature_vector(dataset[dataset.index(apk)]))
-        y.append(apk['Malicious'])
-    print("x and y matrices are created.")
-    return np.array(x), np.array(y)
-
-
-def featureSelection():
-    print("Fetching X and Y matrices...")
-    X, Y = get_X_and_Y_matrices()
-    print("X and Y matrices are fetched.")
-    print(len(Y))
-    input_dim = len(X[0])
-    print("Feature selection")
-
-    test = SelectKBest(score_func=f_classif, k=2000)
-    fit = test.fit(X, Y)
-    print(fit.scores_)
-
-
 class Ui_Form(object):
 
     def __init__(self):
@@ -148,6 +87,7 @@ class Ui_Form(object):
         self.files = os.listdir(self.folder)
 
     def classifyClicked(self):
+        
         self.imageLable.setText("Accuracy score 95.6%")
 
     def displayImageClicker(self):
@@ -166,7 +106,7 @@ class Ui_Form(object):
             writer.writerows(self.dataList)
 
         self.combiningPermissionsAndIntents()
-        featureSelection()
+        
         msg = QMessageBox()
         msg.setIcon(QMessageBox.Information)
         msg.setText("CSV generation complete check folder ./csvs")
