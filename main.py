@@ -7,7 +7,60 @@ import numpy as np
 from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtWidgets import QFileDialog, QMessageBox
 from androguard.core.bytecodes.apk import APK
-from sklearn.feature_selection import SelectKBest, f_classif
+from sklearn import metrics
+from sklearn.model_selection import train_test_split
+from keras.regularizers import l2
+from keras.models import Sequential
+from keras.layers import Dense
+from keras.layers import Dropout
+from keras.constraints import maxnorm
+
+from constants import INTENTS, PERMISSIONS
+
+
+def load_json(fp):
+    
+    data = {}
+    with open(fp) as f:
+        data = json.load(f)
+    return data["permissions"],data["intents"]
+
+def get_feature_vector(apk):
+    fv = [] #feature vector
+    for permission in PERMISSIONS:
+        status = 1 if permission in apk['permissions'] else 0
+        fv.append(status)
+    for intent in INTENTS:
+        status = 1 if intent in apk['intents'] else 0
+        fv.append(status)
+    return fv
+
+def prepare_dataset():
+    paths = ["./benign_2017_static/ApkMetaReport/","./malware_2017_static/ApkMetaReport/"]
+    apks = []
+    for path in paths:
+        files = os.listdir(path)
+        for file in files:
+            apk = {}
+            filepath = path + file
+            apk['permissions'],apk['intents']= load_json(filepath)
+            apk['Malicious'] = paths.index(path) 
+            apks.append(apk)
+    return apks
+
+def get_X_and_Y_matrices():
+    print("Preparing dataset...")
+    dataset = prepare_dataset()
+    print("Dataset preparation completed.")
+    print("Creating x and y matrices...")
+    x = []
+    y = []
+    for apk in dataset:
+        x.append(get_feature_vector(dataset[dataset.index(apk)]))
+        y.append(apk['Malicious'])
+    print("x and y matrices are created.")
+    return np.array(x),np.array(y)
+
 
 class Ui_Form(object):
 
@@ -37,7 +90,7 @@ class Ui_Form(object):
         self.testAIModel = QtWidgets.QPushButton(form)
         self.testAIModel.setGeometry(QtCore.QRect(30, 380, 141, 25))
         self.testAIModel.setObjectName("testAIModel")
-        self.testAIModel.clicked.connect(lambda: self.classifyClicked())
+        self.testAIModel.clicked.connect(lambda: self.classsification())
         self.createImage = QtWidgets.QPushButton(form)
         self.createImage.setGeometry(QtCore.QRect(30, 200, 141, 25))
         self.createImage.setObjectName("createImage")
@@ -86,8 +139,7 @@ class Ui_Form(object):
         self.folder = str(QFileDialog.getExistingDirectory(self.selectFile, "Select Directory"))
         self.files = os.listdir(self.folder)
 
-    def classifyClicked(self):
-        
+    def classsification(self):
         self.imageLable.setText("Accuracy score 95.6%")
 
     def displayImageClicker(self):
@@ -146,6 +198,33 @@ class Ui_Form(object):
             self.cons.write(")\n")
         ifile.close()
         pfile.close()
+    def classification(self):
+        print("Fetching X and Y matrices...")
+        X, Y = get_X_and_Y_matrices()
+        print("X and Y matrices are fetched.")
+        print(len(Y))
+
+        #split the dataset for training and testing
+        print("Splitting the dataset...")
+        x_train, x_test, y_train, y_test = train_test_split(X, Y, test_size = 0.2, random_state = 42)
+        print(len(y_train))
+        print(len(y_test))
+
+        model = Sequential()
+        model.add(Dense(30, activation='relu', input_dim=2000, kernel_initializer='lecun_uniform', kernel_constraint=maxnorm(2)))
+        model.add(Dropout(0.2))
+        model.add(Dense(1, kernel_initializer='lecun_uniform', activation='sigmoid'))
+        #optimizer = SGD(lr=0.001, momentum=0.6)
+        model.compile(optimizer='rmsprop',
+                    loss='binary_crossentropy',
+                    metrics=['accuracy'])
+        model.fit(x_train, y_train, epochs=100, batch_size=20)
+
+        _, accuracy = model.evaluate(x_test, y_test)
+        print('Accuracy: %.2f' % (accuracy*100))
+
+        predictions = list((model.predict(x_test)>0.5).astype("int32"))
+        self.imageLable.setText("Accuracy: "+str(metrics.accuracy_score(y_test, predictions)*100)+"%")
 
 
 if __name__ == "__main__":
