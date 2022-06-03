@@ -18,7 +18,6 @@ from constants import INTENTS, PERMISSIONS
 
 
 def load_json(fp):
-    data = {}
     with open(fp) as f:
         data = json.load(f)
     return data["permissions"], data["intents"]
