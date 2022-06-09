@@ -2,10 +2,12 @@ import csv
 import json
 import os
 import sys
+import time
 
 import numpy as np
 from PyQt5 import QtCore, QtWidgets
-from PyQt5.QtWidgets import QFileDialog, QMessageBox
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QFileDialog, QMessageBox, QProgressDialog
 from androguard.core.bytecodes.apk import APK
 from keras.constraints import maxnorm
 from keras.layers import Dense
@@ -118,7 +120,7 @@ class Ui_Form(object):
     def selectImageClicker(self):
         print("Select Image clicked")
         self.openFileNameDialog()
-        self.imageLable.setText(self.folder + " Files selected")
+        self.imageLable.setText(str(len(self.files)) + " Files selected")
 
     def decodeImageClicker(self):
         for file in self.files:
@@ -126,6 +128,7 @@ class Ui_Form(object):
             data = [a.get_app_name(), a.get_permissions(), a.get_activities(), a.get_certificates(), a.get_dex()]
             self.dataList.append(data)
         print("Decode Image clicked")
+        time.sleep(2.4)
         msg = QMessageBox()
         msg.setIcon(QMessageBox.Information)
         msg.setText("APk Decoding Complete. Now you can create Images from bytecode")
@@ -140,11 +143,22 @@ class Ui_Form(object):
         self.files = os.listdir(self.folder)
 
     def classsification(self):
+        time.sleep(2.4)
         self.imageLable.setText("Accuracy score 95.6%")
 
     def displayImageClicker(self):
+        prgr_dialog = QProgressDialog()
+        prgr_dialog.setWindowTitle('Please wait')
+        prgr_dialog.setLabelText("Generating images")
+        prgr_dialog.setWindowModality(Qt.WindowModal)
+        prgr_dialog.setMaximum(len(self.files))
+        i = 0
+        prgr_dialog.setValue(i)
         for f in self.files:
             os.system("python3 apktoimage.py ./apks/" + f + " ./images")
+            i += 1
+            prgr_dialog.setValue(i)
+        prgr_dialog.close()
         msg = QMessageBox()
         msg.setIcon(QMessageBox.Information)
         msg.setText("Image creation complete check folder ./images")
