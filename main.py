@@ -157,7 +157,7 @@ class Ui_MainWindow(object):
         prgr_dialog.setValue(i)
         for file in self.files:
             a = APK("./apks/" + file)
-            data = [a.get_app_name(), a.get_permissions(), a.get_activities(), a.get_certificates(), a.get_in)]
+            data = [a.get_app_name(), a.get_permissions(), a.get_activities(), a.get_certificates()]
             self.dataList.append(data)
             i += 1
             prgr_dialog.setValue(i)
