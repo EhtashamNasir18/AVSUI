@@ -245,6 +245,37 @@ class Ui_MainWindow(object):
             j += 1
         self.remove_duplicates_intents()
         print("Intents stored in all_intents.txt")
+        pfile = open("all_permissions.txt", "r")
+        data = pfile.readlines()
+        for i in range(len(data)):
+            data[i] = data[i].replace('\n', '')
+        with open("constants.py", "w") as cons:
+            cons.write("PERMISSIONS=(")
+            for p in data[:-1]:
+                if (p != ""):
+                    cons.write("'" + str(p) + "'")
+                    cons.write(",\n")
+            cons.write("'")
+            cons.write(str(data[-1]))
+            cons.write("'")
+            cons.write(")")
+        pfile.close()
+        ifile = open("all_intents.txt", "r")
+        data = ifile.readlines()
+        for i in range(len(data)):
+            data[i] = data[i].replace('\n', '')
+        with open("constants.py", "a") as cons:
+            cons.write("\n")
+            cons.write("INTENTS=(")
+            for i in data[:-1]:
+                if (i != ""):
+                    cons.write("'" + str(i) + "'")
+                    cons.write(",\n")
+            cons.write("'")
+            cons.write(str(data[-1]))
+            cons.write("'")
+            cons.write(")\n")
+        ifile.close()
 
     def decodeImageClicker(self):
         prgr_dialog = QProgressDialog()
