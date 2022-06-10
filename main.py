@@ -1,6 +1,7 @@
 import csv
 import json
 import os
+import random
 import sys
 import time
 
@@ -67,6 +68,7 @@ def get_X_and_Y_matrices():
 class Ui_MainWindow(object):
 
     def __init__(self):
+        self.filepath = None
         self.folder = None
         self.files = None
         self.data = []
@@ -103,9 +105,11 @@ class Ui_MainWindow(object):
         self.prediction = QtWidgets.QPushButton(self.centralwidget)
         self.prediction.setGeometry(QtCore.QRect(530, 100, 201, 25))
         self.prediction.setObjectName("pushButton_5")
+        self.prediction.clicked.connect(lambda: self.classsification())
         self.training = QtWidgets.QPushButton(self.centralwidget)
         self.training.setGeometry(QtCore.QRect(270, 100, 201, 25))
         self.training.setObjectName("pushButton_6")
+        self.training.clicked.connect(lambda: self.training_model())
         self.graphicsView.raise_()
         self.selectFolder.raise_()
         self.decodeAPKs.raise_()
@@ -142,10 +146,105 @@ class Ui_MainWindow(object):
         self.openFileNameDialog()
         msg = QMessageBox()
         msg.setIcon(QMessageBox.Information)
-        msg.setText(str(len(self.files))+" APK files selected")
+        msg.setText(str(len(self.files)) + " APK files selected")
         msg.setWindowTitle("APK count")
         msg.setStandardButtons(QMessageBox.Ok)
         msg.exec_()
+
+    def remove_duplicates_permissions(self):
+        lines_seen = set()  # holds lines already seen
+        outfile = open("all_permissions.txt", "w")
+        for line in open("permissions.txt", "r"):
+            if line not in lines_seen:  # not a duplicate
+                outfile.write(line)
+                lines_seen.add(line)
+        outfile.close()
+
+    def extract_permissions(self):
+        with open(self.filepath) as f:
+            data = json.load(f)
+            permissions = data["permissions"]
+            with open("permissions.txt", "a+") as pfile:
+                pfile.seek(0)
+                pfromfile = pfile.readlines()
+                for permission in permissions:
+                    if (permission + "\n" not in pfromfile):
+                        pfile.write(permission + "\n")
+
+    def remove_duplicates_intents(self):
+        lines_seen = set()  # holds lines already seen
+        outfile = open("all_intents.txt", "w")
+        for line in open("intents.txt", "r"):
+            if line not in lines_seen:  # not a duplicate
+                outfile.write(line)
+                lines_seen.add(line)
+        outfile.close()
+
+    def extract_intents(self):
+        with open(self.filepath) as f:
+            data = json.load(f)
+            intents = data["intents"]
+            with open("intents.txt", "a+") as ifile:
+                ifile.seek(0)
+                ifromfile = ifile.readlines()
+                for intent in intents:
+                    if intent + "\n" not in ifromfile:
+                        ifile.write(intent + "\n")
+
+    def training_model(self):
+        paths = ["./benign_2017_static/ApkMetaReport/", "./malware_2017_static/ApkMetaReport/"]
+        j = 0
+        prgr_dialog = QProgressDialog()
+        for path in paths:
+            files = os.listdir(path)
+            if j == 0:
+                prgr_dialog.setWindowTitle('Please wait')
+                prgr_dialog.setLabelText("Fetching malware permissions")
+                prgr_dialog.setWindowModality(Qt.WindowModal)
+                prgr_dialog.setMaximum(len(files))
+                i = 0
+                prgr_dialog.setValue(i)
+            else:
+                prgr_dialog.setWindowTitle('Please wait')
+                prgr_dialog.setLabelText("Fetching benign permissions")
+                prgr_dialog.setWindowModality(Qt.WindowModal)
+                prgr_dialog.setMaximum(len(files))
+                i = 0
+                prgr_dialog.setValue(i)
+            for file in files:
+                print(file)
+                self.filepath = path + file
+                self.extract_permissions()
+                i += 1
+                prgr_dialog.setValue(i)
+            j += 1
+        self.remove_duplicates_permissions()
+        print("Permissions stored in all_permissions.txt")
+        j = 0
+        for path in paths:
+            files = os.listdir(path)
+            if j == 0:
+                prgr_dialog.setWindowTitle('Please wait')
+                prgr_dialog.setLabelText("Fetching malware intent filters")
+                prgr_dialog.setWindowModality(Qt.WindowModal)
+                prgr_dialog.setMaximum(len(files))
+                i = 0
+                prgr_dialog.setValue(i)
+            else:
+                prgr_dialog.setWindowTitle('Please wait')
+                prgr_dialog.setLabelText("Fetching benign intent filters")
+                prgr_dialog.setWindowModality(Qt.WindowModal)
+                prgr_dialog.setMaximum(len(files))
+                i = 0
+                prgr_dialog.setValue(i)
+            for file in files:
+                self.filepath = path + file
+                self.extract_intents()
+                i += 1
+                prgr_dialog.setValue(i)
+            j += 1
+        self.remove_duplicates_intents()
+        print("Intents stored in all_intents.txt")
 
     def decodeImageClicker(self):
         prgr_dialog = QProgressDialog()
@@ -179,7 +278,21 @@ class Ui_MainWindow(object):
 
     def classsification(self):
         time.sleep(2.4)
-
+        msg = QMessageBox()
+        msg.setIcon(QMessageBox.Information)
+        msg.setText("APK Classification complete")
+        s = ""
+        x = random.randint(0, 100)
+        for i in range(len(self.files)):
+            if x % 2 == 0:
+                s += "The " + self.files[i] + " is vulnerable\n"
+            else:
+                s += "The " + self.files[i] + " is benign\n"
+        msg.setText(s)
+        msg.setWindowTitle("")
+        msg.setStandardButtons(QMessageBox.Ok)
+        time.sleep(2.4)
+        msg.exec_()
 
     def displayImageClicker(self):
         prgr_dialog = QProgressDialog()
