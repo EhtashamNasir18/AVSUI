@@ -64,7 +64,7 @@ def get_X_and_Y_matrices():
     return np.array(x), np.array(y)
 
 
-class Ui_Form(object):
+class Ui_MainWindow(object):
 
     def __init__(self):
         self.folder = None
@@ -73,60 +73,95 @@ class Ui_Form(object):
         self.cons = None
         self.dataList = [[], []]
 
-    def setupUi(self, form):
-        form.setObjectName("Form")
-        form.resize(723, 542)
-        self.selectFile = QtWidgets.QPushButton(form)
-        self.selectFile.setGeometry(QtCore.QRect(30, 50, 141, 25))
-        self.selectFile.setObjectName("selectFile")
+    def setupUi(self, MainWindow):
+        MainWindow.setObjectName("MainWindow")
+        MainWindow.resize(800, 205)
+        self.centralwidget = QtWidgets.QWidget(MainWindow)
+        self.centralwidget.setObjectName("centralwidget")
+        self.selectFolder = QtWidgets.QPushButton(self.centralwidget)
+        self.selectFolder.setGeometry(QtCore.QRect(40, 40, 201, 25))
+        self.selectFolder.setObjectName("pushButton")
+        self.selectFolder.clicked.connect(lambda: self.selectImageClicker())
+        self.decodeAPKs = QtWidgets.QPushButton(self.centralwidget)
+        self.decodeAPKs.setGeometry(QtCore.QRect(270, 40, 201, 25))
+        self.decodeAPKs.setObjectName("pushButton_2")
+        self.decodeAPKs.clicked.connect(lambda: self.decodeImageClicker())
+        self.createImages = QtWidgets.QPushButton(self.centralwidget)
+        self.createImages.setGeometry(QtCore.QRect(530, 40, 201, 25))
+        self.createImages.setObjectName("pushButton_3")
+        self.createImages.clicked.connect(lambda: self.displayImageClicker())
+        self.createCSV = QtWidgets.QPushButton(self.centralwidget)
+        self.createCSV.setGeometry(QtCore.QRect(40, 100, 201, 25))
+        self.createCSV.setObjectName("pushButton_4")
+        self.createCSV.clicked.connect(lambda: self.extractFeaturesClicked())
+        self.graphicsView = QtWidgets.QGraphicsView(self.centralwidget)
+        self.graphicsView.setGeometry(QtCore.QRect(25, 0, 721, 151))
+        self.graphicsView.setObjectName("graphicsView")
+        self.label = QtWidgets.QLabel(self.centralwidget)
+        self.label.setGeometry(QtCore.QRect(40, 10, 67, 17))
+        self.label.setObjectName("label")
+        self.prediction = QtWidgets.QPushButton(self.centralwidget)
+        self.prediction.setGeometry(QtCore.QRect(530, 100, 201, 25))
+        self.prediction.setObjectName("pushButton_5")
+        self.training = QtWidgets.QPushButton(self.centralwidget)
+        self.training.setGeometry(QtCore.QRect(270, 100, 201, 25))
+        self.training.setObjectName("pushButton_6")
+        self.graphicsView.raise_()
+        self.selectFolder.raise_()
+        self.decodeAPKs.raise_()
+        self.createImages.raise_()
+        self.createCSV.raise_()
+        self.label.raise_()
+        self.prediction.raise_()
+        self.training.raise_()
+        MainWindow.setCentralWidget(self.centralwidget)
+        self.menubar = QtWidgets.QMenuBar(MainWindow)
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 800, 22))
+        self.menubar.setObjectName("menubar")
+        MainWindow.setMenuBar(self.menubar)
+        self.statusbar = QtWidgets.QStatusBar(MainWindow)
+        self.statusbar.setObjectName("statusbar")
+        MainWindow.setStatusBar(self.statusbar)
 
-        self.selectFile.clicked.connect(self.selectImageClicker)
-        self.decodeFile = QtWidgets.QPushButton(form)
-        self.decodeFile.setGeometry(QtCore.QRect(30, 120, 141, 25))
-        self.decodeFile.setObjectName("decodeFile")
-        self.decodeFile.clicked.connect(self.decodeImageClicker)
-        self.extractFeatures = QtWidgets.QPushButton(form)
-        self.extractFeatures.setGeometry(QtCore.QRect(30, 290, 141, 25))
-        self.extractFeatures.setObjectName("extractFeatures")
-        self.extractFeatures.clicked.connect(lambda: self.extractFeaturesClicked())
-        self.testAIModel = QtWidgets.QPushButton(form)
-        self.testAIModel.setGeometry(QtCore.QRect(30, 380, 141, 25))
-        self.testAIModel.setObjectName("testAIModel")
-        self.testAIModel.clicked.connect(lambda: self.classsification())
-        self.createImage = QtWidgets.QPushButton(form)
-        self.createImage.setGeometry(QtCore.QRect(30, 200, 141, 25))
-        self.createImage.setObjectName("createImage")
-        self.createImage.clicked.connect(self.displayImageClicker)
-        self.imageLable = QtWidgets.QLabel(form)
-        self.imageLable.setGeometry(QtCore.QRect(320, 16, 361, 501))
-        self.imageLable.setObjectName("imageLable")
-        self.actionOpen_File = QtWidgets.QAction(form)
-        self.actionOpen_File.setObjectName("actionOpen_File")
+        self.retranslateUi(MainWindow)
+        QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
-        self.retranslateUi(form)
-        QtCore.QMetaObject.connectSlotsByName(form)
-
-    def retranslateUi(self, Form):
+    def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
-        Form.setWindowTitle(_translate("Form", "Android Vulnerability Scanner"))
-        self.selectFile.setText(_translate("Form", "Select file"))
-        self.decodeFile.setText(_translate("Form", "Decode file"))
-        self.extractFeatures.setText(_translate("Form", "Extract features"))
-        self.testAIModel.setText(_translate("Form", "Classify"))
-        self.createImage.setText(_translate("Form", "Create image"))
-        self.imageLable.setText(_translate("Form", "TextLabel"))
-        self.actionOpen_File.setText(_translate("Form", "Open File"))
+        MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
+        self.selectFolder.setText(_translate("MainWindow", "Select APK folder"))
+        self.decodeAPKs.setText(_translate("MainWindow", "Decode APKs"))
+        self.createImages.setText(_translate("MainWindow", "Create Images"))
+        self.createCSV.setText(_translate("MainWindow", "Create CSV"))
+        self.label.setText(_translate("MainWindow", "Testing"))
+        self.prediction.setText(_translate("MainWindow", "Predict Classes"))
+        self.training.setText(_translate("MainWindow", "Train on the Dataset CSVs"))
 
     def selectImageClicker(self):
         print("Select Image clicked")
         self.openFileNameDialog()
-        self.imageLable.setText(str(len(self.files)) + " Files selected")
+        msg = QMessageBox()
+        msg.setIcon(QMessageBox.Information)
+        msg.setText(str(len(self.files))+" APK files selected")
+        msg.setWindowTitle("APK count")
+        msg.setStandardButtons(QMessageBox.Ok)
+        msg.exec_()
 
     def decodeImageClicker(self):
+        prgr_dialog = QProgressDialog()
+        prgr_dialog.setWindowTitle('Please wait')
+        prgr_dialog.setLabelText("Decoding files")
+        prgr_dialog.setWindowModality(Qt.WindowModal)
+        prgr_dialog.setMaximum(len(self.files))
+        i = 0
+        prgr_dialog.setValue(i)
         for file in self.files:
             a = APK("./apks/" + file)
-            data = [a.get_app_name(), a.get_permissions(), a.get_activities(), a.get_certificates(), a.get_dex()]
+            data = [a.get_app_name(), a.get_permissions(), a.get_activities(), a.get_certificates(), a.get_in)]
             self.dataList.append(data)
+            i += 1
+            prgr_dialog.setValue(i)
+        prgr_dialog.close()
         print("Decode Image clicked")
         time.sleep(2.4)
         msg = QMessageBox()
@@ -139,12 +174,12 @@ class Ui_Form(object):
     def openFileNameDialog(self):
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
-        self.folder = str(QFileDialog.getExistingDirectory(self.selectFile, "Select Directory"))
+        self.folder = str(QFileDialog.getExistingDirectory(self.selectFolder, "Select Directory"))
         self.files = os.listdir(self.folder)
 
     def classsification(self):
         time.sleep(2.4)
-        self.imageLable.setText("Accuracy score 95.6%")
+
 
     def displayImageClicker(self):
         prgr_dialog = QProgressDialog()
@@ -170,9 +205,6 @@ class Ui_Form(object):
         with open("./csvs/features.csv", "w", newline="") as f:
             writer = csv.writer(f)
             writer.writerows(self.dataList)
-
-        self.combiningPermissionsAndIntents()
-
         msg = QMessageBox()
         msg.setIcon(QMessageBox.Information)
         msg.setText("CSV generation complete check folder ./csvs")
@@ -241,8 +273,8 @@ class Ui_Form(object):
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
-    Form = QtWidgets.QWidget()
-    ui = Ui_Form()
+    Form = QtWidgets.QMainWindow()
+    ui = Ui_MainWindow()
     ui.setupUi(Form)
     Form.show()
     sys.exit(app.exec_())
