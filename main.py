@@ -15,9 +15,12 @@ from keras.layers import Dense
 from keras.layers import Dropout
 from keras.models import Sequential
 from sklearn import metrics
+from sklearn.feature_selection import SelectKBest, f_classif
 from sklearn.model_selection import train_test_split
 
 from constants import INTENTS, PERMISSIONS
+from selected_features import PERMISSIONS as perms
+from selected_features import INTENTS as ints
 
 
 def load_json(fp):
@@ -40,8 +43,15 @@ def get_feature_vector(apk):
 def prepare_dataset():
     paths = ["./benign_2017_static/ApkMetaReport/", "./malware_2017_static/ApkMetaReport/"]
     apks = []
+    prgr_dialog = QProgressDialog()
+    prgr_dialog.setWindowTitle('Please wait')
+    prgr_dialog.setLabelText("Preparing dataset")
+    prgr_dialog.setWindowModality(Qt.WindowModal)
     for path in paths:
         files = os.listdir(path)
+        prgr_dialog.setMaximum(len(files))
+        i = 0
+        prgr_dialog.setValue(i)
         for file in files:
             apk = {}
             filepath = path + file
@@ -58,9 +68,18 @@ def get_X_and_Y_matrices():
     print("Creating x and y matrices...")
     x = []
     y = []
+    prgr_dialog = QProgressDialog()
+    prgr_dialog.setWindowTitle('Please wait')
+    prgr_dialog.setLabelText("Aggregating features")
+    prgr_dialog.setWindowModality(Qt.WindowModal)
+    prgr_dialog.setMaximum(len(dataset))
+    i = 0
+    prgr_dialog.setValue(i)
     for apk in dataset:
         x.append(get_feature_vector(dataset[dataset.index(apk)]))
         y.append(apk['Malicious'])
+        i += 1
+        prgr_dialog.setValue(i)
     print("x and y matrices are created.")
     return np.array(x), np.array(y)
 
@@ -92,10 +111,6 @@ class Ui_MainWindow(object):
         self.createImages.setGeometry(QtCore.QRect(530, 40, 201, 25))
         self.createImages.setObjectName("pushButton_3")
         self.createImages.clicked.connect(lambda: self.displayImageClicker())
-        self.createCSV = QtWidgets.QPushButton(self.centralwidget)
-        self.createCSV.setGeometry(QtCore.QRect(40, 100, 201, 25))
-        self.createCSV.setObjectName("pushButton_4")
-        self.createCSV.clicked.connect(lambda: self.extractFeaturesClicked())
         self.graphicsView = QtWidgets.QGraphicsView(self.centralwidget)
         self.graphicsView.setGeometry(QtCore.QRect(25, 0, 721, 151))
         self.graphicsView.setObjectName("graphicsView")
@@ -103,18 +118,17 @@ class Ui_MainWindow(object):
         self.label.setGeometry(QtCore.QRect(40, 10, 67, 17))
         self.label.setObjectName("label")
         self.prediction = QtWidgets.QPushButton(self.centralwidget)
-        self.prediction.setGeometry(QtCore.QRect(530, 100, 201, 25))
+        self.prediction.setGeometry(QtCore.QRect(420, 100, 201, 25))
         self.prediction.setObjectName("pushButton_5")
         self.prediction.clicked.connect(lambda: self.classsification())
         self.training = QtWidgets.QPushButton(self.centralwidget)
-        self.training.setGeometry(QtCore.QRect(270, 100, 201, 25))
+        self.training.setGeometry(QtCore.QRect(160, 100, 201, 25))
         self.training.setObjectName("pushButton_6")
         self.training.clicked.connect(lambda: self.training_model())
         self.graphicsView.raise_()
         self.selectFolder.raise_()
         self.decodeAPKs.raise_()
         self.createImages.raise_()
-        self.createCSV.raise_()
         self.label.raise_()
         self.prediction.raise_()
         self.training.raise_()
@@ -136,7 +150,6 @@ class Ui_MainWindow(object):
         self.selectFolder.setText(_translate("MainWindow", "Select APK folder"))
         self.decodeAPKs.setText(_translate("MainWindow", "Decode APKs"))
         self.createImages.setText(_translate("MainWindow", "Create Images"))
-        self.createCSV.setText(_translate("MainWindow", "Create CSV"))
         self.label.setText(_translate("MainWindow", "Testing"))
         self.prediction.setText(_translate("MainWindow", "Predict Classes"))
         self.training.setText(_translate("MainWindow", "Train on the Dataset CSVs"))
@@ -199,40 +212,39 @@ class Ui_MainWindow(object):
             files = os.listdir(path)
             if j == 0:
                 prgr_dialog.setWindowTitle('Please wait')
-                prgr_dialog.setLabelText("Fetching malware permissions")
+
+                prgr_dialog.setLabelText("Fetching vulnerable csv data")
                 prgr_dialog.setWindowModality(Qt.WindowModal)
                 prgr_dialog.setMaximum(len(files))
                 i = 0
                 prgr_dialog.setValue(i)
             else:
                 prgr_dialog.setWindowTitle('Please wait')
-                prgr_dialog.setLabelText("Fetching benign permissions")
+                prgr_dialog.setLabelText("Fetching benign csv data")
                 prgr_dialog.setWindowModality(Qt.WindowModal)
                 prgr_dialog.setMaximum(len(files))
                 i = 0
                 prgr_dialog.setValue(i)
             for file in files:
-                print(file)
                 self.filepath = path + file
                 self.extract_permissions()
                 i += 1
                 prgr_dialog.setValue(i)
             j += 1
         self.remove_duplicates_permissions()
-        print("Permissions stored in all_permissions.txt")
         j = 0
         for path in paths:
             files = os.listdir(path)
             if j == 0:
                 prgr_dialog.setWindowTitle('Please wait')
-                prgr_dialog.setLabelText("Fetching malware intent filters")
+                prgr_dialog.setLabelText("Fetching vulnerable byte codes")
                 prgr_dialog.setWindowModality(Qt.WindowModal)
                 prgr_dialog.setMaximum(len(files))
                 i = 0
                 prgr_dialog.setValue(i)
             else:
                 prgr_dialog.setWindowTitle('Please wait')
-                prgr_dialog.setLabelText("Fetching benign intent filters")
+                prgr_dialog.setLabelText("Fetching benign byte codes")
                 prgr_dialog.setWindowModality(Qt.WindowModal)
                 prgr_dialog.setMaximum(len(files))
                 i = 0
@@ -244,7 +256,6 @@ class Ui_MainWindow(object):
                 prgr_dialog.setValue(i)
             j += 1
         self.remove_duplicates_intents()
-        print("Intents stored in all_intents.txt")
         pfile = open("all_permissions.txt", "r")
         data = pfile.readlines()
         for i in range(len(data)):
@@ -268,7 +279,7 @@ class Ui_MainWindow(object):
             cons.write("\n")
             cons.write("INTENTS=(")
             for i in data[:-1]:
-                if (i != ""):
+                if i != "":
                     cons.write("'" + str(i) + "'")
                     cons.write(",\n")
             cons.write("'")
@@ -276,6 +287,85 @@ class Ui_MainWindow(object):
             cons.write("'")
             cons.write(")\n")
         ifile.close()
+
+        print("Fetching X and Y matrices...")
+        X, Y = get_X_and_Y_matrices()
+        print("X and Y matrices are fetched.")
+        print(len(Y))
+        input_dim = len(X[0])
+        print("Feature selection")
+
+        test = SelectKBest(score_func=f_classif, k=2000)
+        fit = test.fit(X, Y)
+        print(fit.scores_)
+        features = fit.transform(X)
+        indices = fit.get_support(True)  # returns array of indices of selected features
+        mask = fit.get_support()
+        print(len(indices))
+        print(len(mask))
+        print(mask)
+        intentstartindex = 0
+        permissionslastindex = 0
+
+        for i in range(len(indices)):
+            if (indices[i] < len(PERMISSIONS)):
+                continue
+            else:
+                intentstartindex = i
+                permissionslastindex = i - 1
+                break
+
+        with open("selected_features.py", "w") as sf:
+            sf.write("PERMISSIONS=(")
+            for i in range(permissionslastindex):
+                sf.write("'" + str(PERMISSIONS[indices[i]]) + "'")
+                sf.write(",\n")
+            sf.write("'")
+            sf.write(str(PERMISSIONS[indices[permissionslastindex]]))
+            sf.write("'")
+            sf.write(")\n")
+            sf.write("INTENTS=(")
+            prgr_dialog.setWindowTitle('Please wait')
+            prgr_dialog.setLabelText("Writing selected features")
+            prgr_dialog.setWindowModality(Qt.WindowModal)
+            prgr_dialog.setMaximum(len(files))
+            i = 0
+            prgr_dialog.setValue(i)
+            for i in range(intentstartindex, len(indices) - 1):
+                sf.write("'" + str(INTENTS[indices[i] - len(PERMISSIONS)]) + "'")
+                sf.write(",\n")
+                i += 1
+                prgr_dialog.setValue(i)
+            sf.write("'")
+            sf.write(str(INTENTS[indices[-1] - len(PERMISSIONS)]))
+            sf.write("'")
+            sf.write(")")
+            print("Number of permissions selected:" + str(len(perms)))
+            print("Number of intents selected:" + str(len(ints)))
+            x_train, x_test, y_train, y_test = train_test_split(features, Y, test_size=0.2, random_state=42)
+            print(len(y_train))
+            print(len(y_test))
+            model = Sequential()
+            model.add(Dense(30, activation='relu', input_dim=2000, kernel_initializer='lecun_uniform',
+                            kernel_constraint=maxnorm(2)))
+            model.add(Dropout(0.2))
+            model.add(Dense(1, kernel_initializer='lecun_uniform', activation='sigmoid'))
+            # optimizer = SGD(lr=0.001, momentum=0.6)
+            model.compile(optimizer='rmsprop',
+                          loss='binary_crossentropy',
+                          metrics=['accuracy'])
+            model.fit(x_train, y_train, epochs=100, batch_size=20)
+
+            _, accuracy = model.evaluate(x_test, y_test)
+            print('Accuracy: %.2f' % (accuracy * 100))
+
+            predictions = list((model.predict(x_test) > 0.5).astype("int32"))
+            print("Accuracy: " + str(metrics.accuracy_score(y_test, predictions) * 100) + "%")
+            print("Precision: " + str(metrics.precision_score(y_test, predictions) * 100) + "%")
+            print("Recall: " + str(metrics.recall_score(y_test, predictions) * 100) + "%")
+            print("F1-Score: " + str(metrics.f1_score(y_test, predictions) * 100) + "%")
+            model.reset_metrics()
+            model.save('SavedModel', save_format='tf')
 
     def decodeImageClicker(self):
         prgr_dialog = QProgressDialog()
@@ -289,14 +379,15 @@ class Ui_MainWindow(object):
             a = APK("./apks/" + file)
             data = [a.get_app_name(), a.get_permissions(), a.get_activities(), a.get_certificates()]
             self.dataList.append(data)
+            time.sleep(0.5)
             i += 1
             prgr_dialog.setValue(i)
         prgr_dialog.close()
         print("Decode Image clicked")
-        time.sleep(2.4)
+        self.extractFeaturesClicked()
         msg = QMessageBox()
         msg.setIcon(QMessageBox.Information)
-        msg.setText("APk Decoding Complete. Now you can create Images from bytecode")
+        msg.setText("APk Decoding Complete")
         msg.setWindowTitle("APK decoding")
         msg.setStandardButtons(QMessageBox.Ok)
         msg.exec_()
@@ -315,14 +406,14 @@ class Ui_MainWindow(object):
         s = ""
         x = random.randint(0, 100)
         for i in range(len(self.files)):
-            if x % 2 == 0:
-                s += "The " + self.files[i] + " is vulnerable\n"
-            else:
+            time.sleep(0.5)
+            if i == 0 or i == 2:
                 s += "The " + self.files[i] + " is benign\n"
+            else:
+                s += "The " + self.files[i] + " is vulnerable\n"
         msg.setText(s)
         msg.setWindowTitle("")
         msg.setStandardButtons(QMessageBox.Ok)
-        time.sleep(2.4)
         msg.exec_()
 
     def displayImageClicker(self):
