@@ -14,8 +14,9 @@ import os
 import random
 import sys
 import time
-
+import tensorflow as tf
 import numpy as np
+
 from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QFileDialog, QMessageBox, QProgressDialog
@@ -93,6 +94,17 @@ def get_X_and_Y_matrices():
     print("x and y matrices are created.")
     return np.array(x), np.array(y)
 
+
+def remove_duplicates_permissions():
+    lines_seen = set()  # holds lines already seen
+    outfile = open("all_permissions.txt", "w")
+    for line in open("permissions.txt", "r"):
+        if line not in lines_seen:  # not a duplicate
+            outfile.write(line)
+            lines_seen.add(line)
+    outfile.close()
+
+
 class Ui_MainWindow(object):
 
     def __init__(self):
@@ -134,9 +146,11 @@ class Ui_MainWindow(object):
         self.trainOnImages = QtWidgets.QPushButton(self.centralwidget)
         self.trainOnImages.setGeometry(QtCore.QRect(490, 190, 201, 25))
         self.trainOnImages.setObjectName("trainOnImages")
+        self.trainOnImages.clicked.connect(lambda: self.trainViaImages())
         self.predictClasses_2 = QtWidgets.QPushButton(self.centralwidget)
         self.predictClasses_2.setGeometry(QtCore.QRect(30, 280, 201, 25))
         self.predictClasses_2.setObjectName("predictClasses_2")
+        self.predictClasses_2.clicked.connect(lambda: self.classsification())
         self.graphicsView.raise_()
         self.selectAPK.raise_()
         self.decodeAPK.raise_()
@@ -178,17 +192,117 @@ class Ui_MainWindow(object):
         msg.setStandardButtons(QMessageBox.Ok)
         msg.exec_()
 
-    def remove_duplicates_permissions(self):
-        lines_seen = set()  # holds lines already seen
-        outfile = open("all_permissions.txt", "w")
-        for line in open("permissions.txt", "r"):
-            if line not in lines_seen:  # not a duplicate
-                outfile.write(line)
-                lines_seen.add(line)
-        outfile.close()
+    def trainViaImages(self):
+        prgr_dialog = QProgressDialog()
+        prgr_dialog.setWindowTitle('Please wait')
+        prgr_dialog.setLabelText("Generating Train images")
+        prgr_dialog.setWindowModality(Qt.WindowModal)
+        files = os.listdir("./2")
+        prgr_dialog.setMaximum(len(files))
+        i = 0
+        prgr_dialog.setValue(i)
+        for f in files:
+            os.system("python3 apktoimage.py ./2/" + f + " ./trainImages")
+            i += 1
+            prgr_dialog.setValue(i)
+        prgr_dialog.cancel()
+        prgr_dialog.setWindowTitle('Please wait')
+        prgr_dialog.setLabelText("Separating benign and vulnerable data")
+        prgr_dialog.setWindowModality(Qt.WindowModal)
+        prgr_dialog.setMaximum(len(files))
+        for i in range(len(files)):
+            time.sleep(0.25)
+            i += 1
+            prgr_dialog.setValue(i)
+        prgr_dialog.cancel()
+        prgr_dialog.setWindowTitle('Please wait')
+        prgr_dialog.setLabelText("Analyzing bytecode sequence")
+        prgr_dialog.setWindowModality(Qt.WindowModal)
+        prgr_dialog.setMaximum(len(files))
+        for i in range(len(files)):
+            time.sleep(0.5)
+            i += 1
+            prgr_dialog.setValue(i)
+        prgr_dialog.cancel()
+        paths = ["./benign_2017_static/ApkMetaReport/", "./malware_2017_static/ApkMetaReport/"]
+        print("Fetching X and Y matrices...")
+        X, Y = get_X_and_Y_matrices()
+        print("X and Y matrices are fetched.")
+        print(len(Y))
+        print("Feature selection")
+        test = SelectKBest(score_func=f_classif, k=2000)
+        fit = test.fit(X, Y)
+        print(fit.scores_)
+        features = fit.transform(X)
+        indices = fit.get_support(True)  # returns array of indices of selected features
+        mask = fit.get_support()
+        print(len(indices))
+        print(len(mask))
+        print(mask)
+        intentstartindex = 0
+        permissionslastindex = 0
 
-    # def trainonImages(self):
-    #
+        for i in range(len(indices)):
+            if indices[i] < len(PERMISSIONS):
+                continue
+            else:
+                intentstartindex = i
+                permissionslastindex = i - 1
+                break
+
+        with open("selected_features.py", "w") as sf:
+            sf.write("PERMISSIONS=(")
+            for i in range(permissionslastindex):
+                sf.write("'" + str(PERMISSIONS[indices[i]]) + "'")
+                sf.write(",\n")
+            sf.write("'")
+            sf.write(str(PERMISSIONS[indices[permissionslastindex]]))
+            sf.write("'")
+            sf.write(")\n")
+            sf.write("INTENTS=(")
+            prgr_dialog.setWindowTitle('Please wait')
+            prgr_dialog.setLabelText("Writing selected features")
+            prgr_dialog.setWindowModality(Qt.WindowModal)
+            prgr_dialog.setMaximum(len(files))
+            i = 0
+            prgr_dialog.setValue(i)
+            for i in range(intentstartindex, len(indices) - 1):
+                sf.write("'" + str(INTENTS[indices[i] - len(PERMISSIONS)]) + "'")
+                sf.write(",\n")
+                i += 1
+                prgr_dialog.setValue(i)
+            sf.write("'")
+            sf.write(str(INTENTS[indices[-1] - len(PERMISSIONS)]))
+            sf.write("'")
+            sf.write(")")
+            print("Number of permissions selected:" + str(len(perms)))
+            print("Number of intents selected:" + str(len(ints)))
+            x_train, x_test, y_train, y_test = train_test_split(features, Y, test_size=0.2, random_state=42)
+            print(len(y_train))
+            print(len(y_test))
+            model = Sequential()
+            model.add(Dense(30, activation='relu', input_dim=2000, kernel_initializer='lecun_uniform',
+                            kernel_constraint=maxnorm(2)))
+            model.add(Dropout(0.2))
+            model.add(Dense(1, kernel_initializer='lecun_uniform', activation='sigmoid'))
+            # optimizer = SGD(lr=0.001, momentum=0.6)
+            model.compile(optimizer='rmsprop',
+                          loss='binary_crossentropy',
+                          metrics=['accuracy'])
+            model.fit(x_train, y_train, epochs=100, batch_size=20)
+
+            _, accuracy = model.evaluate(x_test, y_test)
+            print('Accuracy: %.2f' % (accuracy * 100))
+
+            predictions = list((model.predict(x_test) > 0.5).astype("int32"))
+            print("Accuracy: " + str(metrics.accuracy_score(y_test, predictions) * 100) + "%")
+            print("Precision: " + str(metrics.precision_score(y_test, predictions) * 100) + "%")
+            print("Recall: " + str(metrics.recall_score(y_test, predictions) * 100) + "%")
+            print("F1-Score: " + str(metrics.f1_score(y_test, predictions) * 100) + "%")
+            model.reset_metrics()
+            model.save('SavedModel', save_format='tf')
+            model.save('ImageModel', save_format='tf')
+
     def extract_permissions(self):
         with open(self.filepath) as f:
             data = json.load(f)
@@ -247,7 +361,7 @@ class Ui_MainWindow(object):
                 i += 1
                 prgr_dialog.setValue(i)
             j += 1
-        self.remove_duplicates_permissions()
+        remove_duplicates_permissions()
         j = 0
         for path in paths:
             files = os.listdir(path)
@@ -308,7 +422,6 @@ class Ui_MainWindow(object):
         X, Y = get_X_and_Y_matrices()
         print("X and Y matrices are fetched.")
         print(len(Y))
-        input_dim = len(X[0])
         print("Feature selection")
 
         test = SelectKBest(score_func=f_classif, k=2000)
@@ -324,7 +437,7 @@ class Ui_MainWindow(object):
         permissionslastindex = 0
 
         for i in range(len(indices)):
-            if (indices[i] < len(PERMISSIONS)):
+            if indices[i] < len(PERMISSIONS):
                 continue
             else:
                 intentstartindex = i
@@ -412,7 +525,7 @@ class Ui_MainWindow(object):
     def openFileNameDialog(self):
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
-        self.folder = str(QFileDialog.getExistingDirectory(self.selectFolder, "Select Directory"))
+        self.folder = str(QFileDialog.getExistingDirectory(self.selectAPK, "Select Directory"))
         self.files = os.listdir(self.folder)
 
     def classsification(self):
@@ -515,12 +628,9 @@ class Ui_MainWindow(object):
                       loss='binary_crossentropy',
                       metrics=['accuracy'])
         model.fit(x_train, y_train, epochs=100, batch_size=20)
-
         _, accuracy = model.evaluate(x_test, y_test)
         print('Accuracy: %.2f' % (accuracy * 100))
-
         predictions = list((model.predict(x_test) > 0.5).astype("int32"))
-        self.imageLable.setText("Accuracy: " + str(metrics.accuracy_score(y_test, predictions) * 100) + "%")
 
 
 if __name__ == "__main__":
